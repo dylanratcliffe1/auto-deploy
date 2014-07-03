@@ -39,6 +39,7 @@ function XML-Read($inputFile) {
     $config = $null
     $config = @{}
 
+
     # load it into an XML object:
     [XML]$xml = Get-Content $inputFile
 	
