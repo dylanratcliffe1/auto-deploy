@@ -548,6 +548,14 @@ function Transform-Artifacts($artifacts) {
             Log "Renaming Webservice to web-service"
             Rename-Item Webservice web-service
         }
+		if (Test-Path "Front Office Website") {
+            Log "Front Office Website to front-office-web-site"
+            Rename-Item -path Front Office Website -newname front-office-web-site
+        }
+		if (Test-Path "Back Office Website") {
+            Log "Back Office Website to back-office-web-site"
+            Rename-Item -path Back Office Website -newname back-office-web-site
+        }
 
         # Check what folder the web-service stuff is in and change it 
 		try {
