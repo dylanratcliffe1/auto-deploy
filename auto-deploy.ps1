@@ -456,7 +456,7 @@ function Get-ArtifactsArray($projectKey, $planKey, $buildNumber, $bambooSession)
 
     # Get the latest build
     Log ("Finding artifacts for build " + $buildNumber + " in " + $projectKey + "-" + $planKey)
-    $request = Invoke-RestMethod ("https://build.anzgcis.com/rest/api/latest/result/" + $projectKey + "-" + $planKey + "/" + $buildNumber + "/?expand=artifacts") -WebSession $bambooSession
+    $request = Invoke-RestMethod ("https://build.anzgcis.com/rest/api/latest/result/" + $projectKey + "-" + $planKey + "/" + $buildNumber + "/?buildstate=Successful&expand=artifacts") -WebSession $bambooSession
     
     # Get the artifacts from the build
     $webArtifacts = $request.result.artifacts.artifact
