@@ -11,8 +11,10 @@ Param(
 $defaultErrorActionPreference = "Stop"
 $ErrorActionPreference = "Stop"
 
-# UNCOMMENT THIS BEFORE USING THE CODE
-#Import-Module WebAdministration
+# Import module for Windows Servers
+if ((Get-Module -Name WebAdministration) -ne $null) {
+	Import-Module WebAdministration
+}
 
 # Text formatting functions
 
