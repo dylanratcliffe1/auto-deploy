@@ -453,9 +453,13 @@ function Bamboo-Logout($bambooSession) {
 function Get-ArtifactsArray($projectKey, $planKey, $buildNumber, $bambooSession) {
     # Returns an array of hashtables with the artifact name and url
 
-    # Get the latest build
-    Log ("Finding artifacts for build " + $buildNumber + " in " + $projectKey + "-" + $planKey)
-    $request = Invoke-RestMethod ("https://build.anzgcis.com/rest/api/latest/result/" + $projectKey + "-" + $planKey + "/" + $buildNumber + "/?buildstate=Successful&expand=artifacts") -WebSession $bambooSession
+    # Get the latest successful build
+	if ($buildNumber -eq "latest") {
+		$latest_success = Invoke-RestMethod ("https://build.anzgcis.com/rest/api/latest/result/" + $projectKey + "-" + $planKey + "?buildstate=Successful&max-results=1&expand=results.result") -WebSession $bambooSession
+    	$buildNumber = $latest_success.results.results.result.buildnumber
+	}
+	Log ("Finding artifacts for build " + $buildNumber + " in " + $projectKey + "-" + $planKey)
+    $request = Invoke-RestMethod ("https://build.anzgcis.com/rest/api/latest/result/" + $projectKey + "-" + $planKey + "/" + $buildNumber + "/?expand=artifacts") -WebSession $bambooSession
     
     # Get the artifacts from the build
     $webArtifacts = $request.result.artifacts.artifact
