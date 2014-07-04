@@ -453,11 +453,6 @@ function Bamboo-Logout($bambooSession) {
 function Get-ArtifactsArray($projectKey, $planKey, $buildNumber, $bambooSession) {
     # Returns an array of hashtables with the artifact name and url
 
-    # Get the latest successful build
-	if ($buildNumber -eq "latest") {
-		$latest_success = Invoke-RestMethod ("https://build.anzgcis.com/rest/api/latest/result/" + $projectKey + "-" + $planKey + "?buildstate=Successful&max-results=1&expand=results.result") -WebSession $bambooSession
-    	$buildNumber = $latest_success.results.results.result.buildnumber
-	}
 	Log ("Finding artifacts for build " + $buildNumber + " in " + $projectKey + "-" + $planKey)
     $request = Invoke-RestMethod ("https://build.anzgcis.com/rest/api/latest/result/" + $projectKey + "-" + $planKey + "/" + $buildNumber + "/?expand=artifacts") -WebSession $bambooSession
     
@@ -679,6 +674,12 @@ try {
 	foreach ($Product in $Products) {
 	    H1 "Downloading ${Product} Files"
 
+		# Get the latest successful build
+		if ($config.Get_Item($product).bamboo.buildnumber -eq "latest") {
+			$latest_success = Invoke-RestMethod ("https://build.anzgcis.com/rest/api/latest/result/" + $config.Get_Item($product).bamboo.projectkey + "-" + $config.Get_Item($product).bamboo.planKey + "?buildstate=Successful&max-results=1&expand=results.result") -WebSession $bambooSession
+    		$config.Get_Item($product).bamboo.buildnumber = $latest_success.results.results.result.buildnumber
+		}
+		
 	    # Download the files
 	    Download-Files $Product
 
