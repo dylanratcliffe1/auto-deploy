@@ -722,6 +722,11 @@ try {
 	# Deploy the sites
 	foreach ($product in $installOrder) {
 		try {
+			# Restart the server to kick anyone out of the database
+			Log "Kicking people out of SQL..."
+			Restart-Service 'MSSQL$MSSQL'
+			
+			#Restore database
 	    	Restore-Database $config.Get_Item($product).files.databaseName $config.Get_Item($product).files.databaseBackup
 		} catch {
 			# Do nothing for the time being	
