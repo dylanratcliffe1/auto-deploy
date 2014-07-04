@@ -706,6 +706,9 @@ try {
 	$ProductsArray = $Products -split ", "
 	$installOrder = Get-InstallOrder $ProductsArray
 
+	# Stop IIS
+	Stop-Service W3SVC
+	
 	# Deploy the sites
 	foreach ($product in $installOrder) {
 		try {
@@ -756,6 +759,9 @@ try {
 		Replace-InFile -File $configFiles[$i] -SearchRegex 'mode="Forms"' -ReplaceString 'mode="Windows"'
 		$i++
 	}
+	
+	# Start IIS
+	Start-Service W3SVC
 
 	# Enable Windows and Anon auth for IIS
 	Log "Setting IIS authenication..."
