@@ -302,9 +302,8 @@ function Replace-Localhost($file) {
 function Replace-InFile($File, $SearchRegex, $ReplaceString) {
     # Changing localhost to localhost\MSSQL in config file
     (Get-Content $File.FullName) | 
-    Foreach-Object {$_ -replace $SearchRegex, $ReplaceString} | 
+    Foreach-Object {$_ -replace $SearchRegex, $ReplaceString; Log ("Replaced $SearchRegex with $ReplaceString in " + $File.FullName)} | 
     Set-Content $File.FullName
-    Log ("Replaced $SearchRegex with $ReplaceString in " + $File.FullName)
 }
 
 # Local LDAP needs to be setup for GCIS
