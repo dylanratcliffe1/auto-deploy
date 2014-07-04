@@ -307,14 +307,14 @@ function Replace-InFile($File, $SearchRegex, $ReplaceString) {
     #Log ("Replaced ${SearchRegex} with $ReplaceString in " + $File.FullName)
 	
 	
-	$content = Get-Content $File.FullName | Out-Null
+	$content = Get-Content $File.FullName
 	$content | Foreach-Object {
 		if ($_ -match $SearchRegex) {
-			$_ -replace $SearchRegex, $ReplaceString
+			$_ -replace $SearchRegex, $ReplaceString | Out-Null
 			Log ("Replaced ${SearchRegex} with $ReplaceString in " + $File.FullName)
 		}
-	} | Out-Null
-	$content | Set-Content $File.FullName | Out-Null
+	} 
+	$content | Set-Content $File.FullName
 }
 
 # Local LDAP needs to be setup for GCIS
