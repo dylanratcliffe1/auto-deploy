@@ -11,8 +11,10 @@ Param(
 $defaultErrorActionPreference = "Stop"
 $ErrorActionPreference = "Stop"
 
-# UNCOMMENT THIS BEFORE USING THE CODE
-#Import-Module WebAdministration
+# Import module for Windows Servers
+if ((Get-Module -Name WebAdministration) -ne $null) {
+	Import-Module WebAdministration
+}
 
 # Text formatting functions
 
@@ -306,7 +308,17 @@ function Replace-InFile($File, $SearchRegex, $ReplaceString) {
     (Get-Content $File.FullName) | 
     Foreach-Object {$_ -replace $SearchRegex, $ReplaceString} | 
     Set-Content $File.FullName
-    Log ("Replaced $SearchRegex with $ReplaceString in " + $File.FullName)
+    Log ("Replaced ${SearchRegex} with $ReplaceString in " + $File.FullName)
+	
+	
+	#$content = Get-Content $File.FullName
+	#$content | Foreach-Object {
+	#	if ($_ -match $SearchRegex) {
+	#		$_ -replace $SearchRegex, $ReplaceString | Out-Null
+	#		Log ("Replaced ${SearchRegex} with $ReplaceString in " + $File.FullName)
+	#	}
+	#} 
+	#$content | Set-Content $File.FullName
 }
 
 # Local LDAP needs to be setup for GCIS
@@ -455,8 +467,7 @@ function Bamboo-Logout($bambooSession) {
 function Get-ArtifactsArray($projectKey, $planKey, $buildNumber, $bambooSession) {
     # Returns an array of hashtables with the artifact name and url
 
-    # Get the latest build
-    Log ("Finding artifacts for build " + $buildNumber + " in " + $projectKey + "-" + $planKey)
+	Log ("Finding artifacts for build " + $buildNumber + " in " + $projectKey + "-" + $planKey)
     $request = Invoke-RestMethod ("https://build.anzgcis.com/rest/api/latest/result/" + $projectKey + "-" + $planKey + "/" + $buildNumber + "/?expand=artifacts") -WebSession $bambooSession
     
     # Get the artifacts from the build
@@ -688,6 +699,12 @@ try {
 	foreach ($Product in $Products) {  
 		H1 "Downloading ${Product} Files"
 
+		# Get the latest successful build
+		if ($config.Get_Item($product).bamboo.buildnumber -eq "latest") {
+			$latest_success = Invoke-RestMethod ("https://build.anzgcis.com/rest/api/latest/result/" + $config.Get_Item($product).bamboo.projectkey + "-" + $config.Get_Item($product).bamboo.planKey + "?buildstate=Successful&max-results=1&expand=results.result") -WebSession $bambooSession
+    		$config.Get_Item($product).bamboo.buildnumber = $latest_success.results.results.result.buildnumber
+		}
+		
 	    # Download the files
 	    Download-Files $Product
 
@@ -714,10 +731,18 @@ try {
 	$ProductsArray = $Products -split ", "
 	$installOrder = Get-InstallOrder $ProductsArray
 
+	# Stop IIS
+	Stop-Service W3SVC
+	
 	# Deploy the sites
 	foreach ($Product in $installOrder) {
 		try {
-	    	Restore-Database $config.Get_Item($Product).files.databaseName $config.Get_Item($product).files.databaseBackup
+			# Restart the server to kick anyone out of the database
+			Log "Kicking people out of SQL..."
+			Restart-Service 'MSSQL$MSSQL'
+			
+			#Restore database
+	    	Restore-Database $config.Get_Item($product).files.databaseName $config.Get_Item($product).files.databaseBackup
 		} catch {
 			# Do nothing for the time being	
 		}
@@ -764,6 +789,9 @@ try {
 		Replace-InFile -File $configFiles[$i] -SearchRegex 'mode="Forms"' -ReplaceString 'mode="Windows"'
 		$i++
 	}
+	
+	# Start IIS
+	Start-Service W3SVC
 
 	# Enable Windows and Anon auth for IIS
 	Log "Setting IIS authenication..."

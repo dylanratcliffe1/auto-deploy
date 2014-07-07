@@ -103,7 +103,7 @@
 		<files>
 			<!-- File locations can be passed as HTML links, GIT Links or Windows locations -->
 			<!-- You can set uselocalartifacts to true to override pulling artifacts down from bamboo -->
-			<uselocalartifacts>True</uselocalartifacts>
+			<uselocalartifacts>False</uselocalartifacts>
 			<!-- artifacts is the location of the artifacts directory containing core-database, web-service etc. -->
 			<artifacts>C:\temp\TBCP-CI-latest</artifacts>
 			<!-- databaseBackup is the location of the BAK file export -->
