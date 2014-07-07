@@ -32,6 +32,10 @@ function Error($s) {
     Write-Host $s -ForegroundColor Red -BackgroundColor Black
 }
 
+function Warn($s) {
+    Write-Host $s -ForegroundColor Magenta -BackgroundColor Yellow
+}
+
 function XML-Read($inputFile) {
     # This function reads the input XML file and return a populated $config variable
     
@@ -56,7 +60,7 @@ function XML-Read($inputFile) {
 											databaseName = $Product.files.databaseName.toString()
                                         	databaseBackup = $Product.files.databaseBackup.toString()
                                         	moddedBuildTools = $Product.files.moddedBuildTools.toString()};
-                                    	dependencies = @($product.depencencies.dependency)} )
+                                    	dependencies = @($Product.depencencies.dependency)} )
     }
     return $config    
 }
@@ -637,7 +641,7 @@ try {
 		Add-PSSnapin SqlServerCmdletSnapin100
 		Add-PSSnapin SqlServerProviderSnapin100
 	} catch {
-		Log "Snapins failed, that's probabaly fine"
+		Log "Snapins failed, it's probably fine"
 	}
 
 	# Check for admin
@@ -654,24 +658,35 @@ try {
 	    Throw $Error[0]
 	}
 
-	# format the paprmeters so that they play nice
+	# format the parameters so that they play nice
 	$Products = $Products.Trim() 
 
 	# Check to see if we are going to need a bamboo session
 	foreach ($product in $Products) {
-		if ($config.Get_Item($product).files.uselocalartifacts -eq $false) {
-			$needBamboo = $true
+		# Compare input product name with actual products in config file to ensure input exists
+		if ($config.keys -notcontains $Product){
+			Warn "Product $product does not exist"
+			Warn "Continuing with valid product input"
+			$Products = $Products -ne $Product
+			#ADD "DID YOU MEAN ???" OPTIONS 
+		}
+		else
+		{
+			if ($config.Get_Item($product).files.uselocalartifacts -eq $false) {
+				$needBamboo = $true
+			}
 		}
 	}
+	
 	if ($needBamboo) {
 		# Connect to Bamboo 
 		$credential = Get-Credential -Message "Username and password for https://build.anzgcis.com"
 	    $bambooSession = Bamboo-Login -username $credential.GetNetworkCredential().username -password $credential.GetNetworkCredential().password
 	}
-
+		
 	#download the files and move the modded scripts
-	foreach ($Product in $Products) {
-	    H1 "Downloading ${Product} Files"
+	foreach ($Product in $Products) {  
+		H1 "Downloading ${Product} Files"
 
 	    # Download the files
 	    Download-Files $Product
@@ -679,17 +694,17 @@ try {
 	    # Verify them right away
 		try {
 	    	Log "Transforming artifacts..." 
-	    	Transform-Artifacts -artifacts $config.Get_Item($product).files.artifacts
+	    	Transform-Artifacts -artifacts $config.Get_Item($Product).files.artifacts
 	    	Log "Verifying Artifacts..."
-	    	Verify-Artifacts $config.Get_Item($product).files.artifacts
+	    	Verify-Artifacts $config.Get_Item($Product).files.artifacts
 		} catch {
 	    	throw
 		}
 
 	    # Move modded build tools accross
-	    if ($config.Get_Item($product).files.moddedBuildTools -ne "") {
+	    if ($config.Get_Item($Product).files.moddedBuildTools -ne "") {
 	        Log "Moving modded build tools..."
-	        Copy-Item $config.Get_Item($product).files.moddedBuildTools -Destination ($config.Get_Item($product).files.artifacts.FullName) -Force -Recurse
+	        Copy-Item $config.Get_Item($Product).files.moddedBuildTools -Destination ($config.Get_Item($Product).files.artifacts.FullName) -Force -Recurse
 	    }
 	}
 
@@ -700,14 +715,14 @@ try {
 	$installOrder = Get-InstallOrder $ProductsArray
 
 	# Deploy the sites
-	foreach ($product in $installOrder) {
+	foreach ($Product in $installOrder) {
 		try {
-	    	Restore-Database $config.Get_Item($product).files.databaseName $config.Get_Item($product).files.databaseBackup
+	    	Restore-Database $config.Get_Item($Product).files.databaseName $config.Get_Item($product).files.databaseBackup
 		} catch {
 			# Do nothing for the time being	
 		}
-	    Build-Database $config.Get_Item($product).files.databaseName $config.Get_Item($product).files.artifacts
-	    Deploy-Site $product $config.Get_Item($product).files.artifacts
+	    Build-Database $config.Get_Item($Product).files.databaseName $config.Get_Item($product).files.artifacts
+	    Deploy-Site $Product $config.Get_Item($Product).files.artifacts
 	}
 
 	# Set up the application pools in IIS correctly
