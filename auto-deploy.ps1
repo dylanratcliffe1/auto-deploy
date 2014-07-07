@@ -35,7 +35,7 @@ function Error($s) {
 }
 
 function Warn($s) {
-    Write-Host $s -ForegroundColor Magenta -BackgroundColor Yellow
+    Write-Host $s -ForegroundColor Yellow -BackgroundColor Black
 }
 
 function XML-Read($inputFile) {
@@ -672,22 +672,56 @@ try {
 	# format the parameters so that they play nice
 	$Products = $Products.Trim() 
 
-	# Check to see if we are going to need a bamboo session
-	foreach ($product in $Products) {
-		# Compare input product name with actual products in config file to ensure input exists
-		if ($config.keys -notcontains $Product){
-			Warn "Product $product does not exist"
-			Warn "Continuing with valid product input"
-			$Products = $Products -ne $Product
-			#ADD "DID YOU MEAN ???" OPTIONS 
-		}
-		else
-		{
-			if ($config.Get_Item($product).files.uselocalartifacts -eq $false) {
-				$needBamboo = $true
+	# Compare input product name with actual products in config file to ensure input exists
+	H2 "Input Validation"
+	do{
+		foreach ($product in $Products) {
+		$invalid = 0
+			if ($config.keys -notcontains $Product){
+				$invalid = 1
+				$title = Warn "Product `"$product`" does not exist"
+				$message = "Do you want to skip the invalid input, correct the invalid input, or stop the script?"
+
+				$ignore = New-Object System.Management.Automation.Host.ChoiceDescription "&Ignore", `
+				    "Ignores the invalid input `"$product`" and continues the script"
+
+				$correct = New-Object System.Management.Automation.Host.ChoiceDescription "&Correct", `
+				    "Allows you to re-enter the name of a GCIS product"
+					
+				$stop = New-Object System.Management.Automation.Host.ChoiceDescription "&Stop", `
+			    	"Stops the script execution"
+
+				$options = [System.Management.Automation.Host.ChoiceDescription[]]($ignore, $correct, $stop)
+
+				$result = $host.ui.PromptForChoice($title, $message, $options, 0) 
+
+				switch ($result)
+				    {
+				        0 {"You selected Ignore."
+							"Continuing with valid product input"
+							$Products = $Products -ne $Product}
+				        
+						1 {"You selected Correct."
+							$correction = Read-Host "Please input the correct GCIS product name:"
+							$Products = $Products + $correction -ne $Product}
+						
+						2 {"You selected Stop."
+							"Stopping script now."
+							exit}
+				    }
+			}
+			else
+			{
+				# Check to see if we are going to need a bamboo session
+				if ($config.Get_Item($product).files.uselocalartifacts -eq $false) {
+					$needBamboo = $true
+				}
 			}
 		}
 	}
+	while($invalid -eq 1)
+	
+	log "Validation Complete"
 	
 	if ($needBamboo) {
 		# Connect to Bamboo 
@@ -820,8 +854,8 @@ try {
 
 	# Update core config in database
 	h1 "Updating Database"
-	h2 "Updating core settings"
-	Log "Updating URLs in Core config table"
+	h2 "Updating Core Settings"
+	Log "Updating URLs in Core Config Table"
 	try {
 		Invoke-Sqlcmd -Query "UPDATE [core].[dbo].[Config] set Value = REPLACE(Value, 'melci21.dev.anzgcis.local', CONVERT(varchar(max),SERVERPROPERTY('MachineName')));" -ServerInstance "localhost\MSSQL"
 	} catch {
@@ -830,7 +864,7 @@ try {
 	}
 
 	# Give the local user permissions to the tables that we just added
-	h2 "Setting user permissions"
+	h2 "Setting User Permissions"
 	foreach ($Product in $Products) {
 		Give-Permissions -Table $Product -User "BUILTIN\IIS_IUSRS"
 	}
